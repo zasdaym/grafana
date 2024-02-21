@@ -266,6 +266,7 @@ export class GrafanaApp {
         keybindings: keybindingsService,
         newAssetsChecker,
         config,
+        extensionsRegistry,
       };
 
       setReturnToPreviousHook(useReturnToPreviousInternal);
