@@ -83,7 +83,7 @@ import { PanelRenderer } from './features/panel/components/PanelRenderer';
 import { DatasourceSrv } from './features/plugins/datasource_srv';
 import { getCoreExtensionConfigurations } from './features/plugins/extensions/getCoreExtensionConfigurations';
 import { createPluginExtensionsGetter } from './features/plugins/extensions/getPluginExtensions';
-import { ReactivePluginExtenionRegistry } from './features/plugins/extensions/reactivePluginExtensionRegistry';
+import { ReactivePluginExtensionsRegistry } from './features/plugins/extensions/reactivePluginExtensionRegistry';
 import { createPluginExtensionsHook } from './features/plugins/extensions/usePluginExtensions';
 import { importPanelPlugin, syncGetPanelPlugin } from './features/plugins/importPanelPlugin';
 import { preloadPlugins } from './features/plugins/pluginPreloader';
@@ -212,7 +212,7 @@ export class GrafanaApp {
       modalManager.init();
 
       // Initialize plugin extensions
-      const extensionsRegistry = new ReactivePluginExtenionRegistry();
+      const extensionsRegistry = new ReactivePluginExtensionsRegistry();
       extensionsRegistry.register({
         pluginId: 'grafana',
         extensionConfigs: getCoreExtensionConfigurations(),
