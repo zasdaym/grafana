@@ -1,9 +1,9 @@
 import { css } from '@emotion/css';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Route, Switch } from 'react-router-dom';
 
-import { GrafanaTheme2, PageLayoutType } from '@grafana/data';
-import { locationService } from '@grafana/runtime';
+import { GrafanaTheme2, PageLayoutType, PluginExtensionPoints } from '@grafana/data';
+import { getPluginComponentExtensions, locationService } from '@grafana/runtime';
 import { getUrlSyncManager, SceneComponentProps, SceneObjectBase, SceneObjectState } from '@grafana/scenes';
 import { useStyles2 } from '@grafana/ui';
 import { Page } from 'app/core/components/Page/Page';
@@ -32,6 +32,26 @@ export class DataTrailsApp extends SceneObjectBase<DataTrailsAppState> {
     const { trail, home } = model.useState();
     const styles = useStyles2(getStyles);
 
+    type Options = {
+      extensionPointId: string;
+      context?: object | Record<string | symbol, unknown> | undefined;
+    };
+
+    const [count, setCount] = useState(0);
+
+    const context = {
+      test: 'whatever',
+      hello: () => {
+        console.log('done it');
+        setCount(count + 1);
+      },
+    };
+
+    const integratedComponents = getPluginComponentExtensions({
+      extensionPointId: PluginExtensionPoints.DataTrailsExtension,
+      context,
+    });
+
     return (
       <Switch>
         <Route
@@ -55,6 +75,12 @@ export class DataTrailsApp extends SceneObjectBase<DataTrailsAppState> {
               layout={PageLayoutType.Custom}
             >
               <div className={styles.customPage}>
+                <div> STATE ME {count} </div>
+                <div style={{ border: 'magenta 2px dotted' }}>
+                  {integratedComponents.extensions.map((component) => {
+                    return <component.component key={component.id} />;
+                  })}
+                </div>
                 <DataTrailView trail={trail} />
               </div>
             </Page>
