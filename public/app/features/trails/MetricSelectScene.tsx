@@ -27,7 +27,6 @@ import {
   Alert,
   Icon,
   useStyles2,
-  LoadingPlaceholder,
   MultiSelect,
   InlineFieldRow,
   InlineField,
