@@ -1,21 +1,24 @@
 import { css } from '@emotion/css';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Route, Switch } from 'react-router-dom';
 
-import { GrafanaTheme2, PageLayoutType, PluginExtensionPoints } from '@grafana/data';
-import { getPluginComponentExtensions, locationService } from '@grafana/runtime';
+import { GrafanaTheme2, PageLayoutType } from '@grafana/data';
+import { locationService } from '@grafana/runtime';
 import { getUrlSyncManager, SceneComponentProps, SceneObjectBase, SceneObjectState } from '@grafana/scenes';
 import { useStyles2 } from '@grafana/ui';
 import { Page } from 'app/core/components/Page/Page';
 
 import { DataTrail } from './DataTrail';
 import { DataTrailsHome } from './DataTrailsHome';
+import { useIntegrations } from './Integrations';
+import { DataTrailsIntegrations } from './Integrations/types';
 import { getTrailStore } from './TrailStore/TrailStore';
 import { getMetricName, getUrlForTrail, newMetricsTrail } from './utils';
 
 export interface DataTrailsAppState extends SceneObjectState {
   trail: DataTrail;
   home: DataTrailsHome;
+  integrations?: DataTrailsIntegrations;
 }
 
 export class DataTrailsApp extends SceneObjectBase<DataTrailsAppState> {
@@ -32,25 +35,20 @@ export class DataTrailsApp extends SceneObjectBase<DataTrailsAppState> {
     const { trail, home } = model.useState();
     const styles = useStyles2(getStyles);
 
-    type Options = {
-      extensionPointId: string;
-      context?: object | Record<string | symbol, unknown> | undefined;
-    };
+    const { extensionContainer, labelProviders, metricProviders, metricSorteHeuristics, relatedMetricSortHeuristics } =
+      useIntegrations();
 
-    const [count, setCount] = useState(0);
-
-    const context = {
-      test: 'whatever',
-      hello: () => {
-        console.log('done it');
-        setCount(count + 1);
-      },
-    };
-
-    const integratedComponents = getPluginComponentExtensions({
-      extensionPointId: PluginExtensionPoints.DataTrailsExtension,
-      context,
-    });
+    useEffect(() => {
+      console.log('SET STATE INTEGRATIONS.');
+      model.setState({
+        integrations: {
+          labelProviders,
+          metricProviders,
+          metricSorteHeuristics,
+          relatedMetricSortHeuristics,
+        },
+      });
+    }, [model, labelProviders, metricProviders, metricSorteHeuristics, relatedMetricSortHeuristics]);
 
     return (
       <Switch>
@@ -74,13 +72,11 @@ export class DataTrailsApp extends SceneObjectBase<DataTrailsAppState> {
               pageNav={{ text: getMetricName(trail.state.metric) }}
               layout={PageLayoutType.Custom}
             >
+              {
+                // This must be mounted to ensure the integrations are executed
+                extensionContainer
+              }
               <div className={styles.customPage}>
-                <div> STATE ME {count} </div>
-                <div style={{ border: 'magenta 2px dotted' }}>
-                  {integratedComponents.extensions.map((component) => {
-                    return <component.component key={component.id} />;
-                  })}
-                </div>
                 <DataTrailView trail={trail} />
               </div>
             </Page>

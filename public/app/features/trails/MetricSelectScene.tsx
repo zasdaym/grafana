@@ -1,8 +1,8 @@
 import { css } from '@emotion/css';
-import { debounce } from 'lodash';
-import React, { useCallback } from 'react';
+import { debounce, isString } from 'lodash';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import { GrafanaTheme2, VariableRefresh } from '@grafana/data';
+import { GrafanaTheme2, VariableRefresh, SelectableValue } from '@grafana/data';
 import {
   PanelBuilders,
   QueryVariable,
@@ -20,16 +20,32 @@ import {
   VariableDependencyConfig,
 } from '@grafana/scenes';
 import { VariableHide } from '@grafana/schema';
-import { Input, InlineSwitch, Field, Alert, Icon, useStyles2 } from '@grafana/ui';
+import {
+  Input,
+  InlineSwitch,
+  Field,
+  Alert,
+  Icon,
+  useStyles2,
+  LoadingPlaceholder,
+  MultiSelect,
+  InlineFieldRow,
+  InlineField,
+} from '@grafana/ui';
 
 import { getPreviewPanelFor } from './AutomaticMetricQueries/previewPanel';
 import { MetricCategoryCascader } from './MetricCategory/MetricCategoryCascader';
 import { MetricScene } from './MetricScene';
 import { SelectMetricAction } from './SelectMetricAction';
 import { StatusWrapper } from './StatusWrapper';
-import { sortRelatedMetrics } from './relatedMetrics';
+import {
+  CalculateDistanceFactor,
+  getHeuristicByMetricFactorCalculator,
+  getLevenDistanceFactorCalculator,
+  sortRelatedMetrics,
+} from './relatedMetrics';
 import { getVariablesWithMetricConstant, trailDS, VAR_DATASOURCE, VAR_FILTERS_EXPR, VAR_METRIC_NAMES } from './shared';
-import { getFilters, getTrailFor } from './utils';
+import { getFilters, getTrailFor, useDataTrailsAppIntegrations, useSelectedMetric } from './utils';
 
 interface MetricPanel {
   name: string;
@@ -185,8 +201,12 @@ export class MetricSelectScene extends SceneObjectBase<MetricSelectSceneState> {
 
     const metricNames = metricsAfterFilter;
     const trail = getTrailFor(this);
+    const metric = trail.state.metric;
+
     const sortedMetricNames =
-      trail.state.metric !== undefined ? sortRelatedMetrics(metricNames, trail.state.metric) : metricNames;
+      metric !== undefined
+        ? sortRelatedMetrics(metricNames, this._activeRelatedMetricHeuristicCalculators)
+        : metricNames;
     const metricsMap: Record<string, MetricPanel> = {};
     const metricsLimit = 120;
 
@@ -219,6 +239,7 @@ export class MetricSelectScene extends SceneObjectBase<MetricSelectSceneState> {
       // There is no current metric
     }
 
+    console.log('Oupdateing preview cache', metricsMap);
     this.previewCache = metricsMap;
   }
 
@@ -279,6 +300,7 @@ export class MetricSelectScene extends SceneObjectBase<MetricSelectSceneState> {
 
     const rowTemplate = this.state.showPreviews ? ROW_PREVIEW_HEIGHT : ROW_CARD_HEIGHT;
 
+    console.log('HEY CHILDREN', metricsList);
     this.state.body.setState({ children, autoRows: rowTemplate });
   }
 
@@ -318,6 +340,14 @@ export class MetricSelectScene extends SceneObjectBase<MetricSelectSceneState> {
     this.buildLayout();
   };
 
+  private _activeRelatedMetricHeuristicCalculators: CalculateDistanceFactor[] = [];
+
+  private setActiveRelatedMetricHeuristicCalculators(heuristicCalculators: CalculateDistanceFactor[]) {
+    this._activeRelatedMetricHeuristicCalculators = heuristicCalculators;
+    this.updateMetrics(false);
+    this.buildLayout();
+  }
+
   public static Component = ({ model }: SceneComponentProps<MetricSelectScene>) => {
     const { searchQuery, showPreviews, body, metricsAfterSearch, metricsAfterFilter, prefixFilter } = model.useState();
     const { children } = body.useState();
@@ -328,6 +358,10 @@ export class MetricSelectScene extends SceneObjectBase<MetricSelectSceneState> {
     const noMetrics = !metricNamesStatus.isLoading && model.currentMetricNames.size === 0;
 
     const isLoading = metricNamesStatus.isLoading && children.length === 0;
+
+    const [selectedRelatedMetricSortHeuristics, setSelectedRelatedMetricSortHeuristics] = useState<string[]>(['leven']);
+
+    const [relatedMetricSortHeuristicsLoading, setRelatedMetricSortHeuristicsLoading] = useState(false);
 
     const blockingMessage = isLoading
       ? undefined
@@ -341,6 +375,54 @@ export class MetricSelectScene extends SceneObjectBase<MetricSelectSceneState> {
         : undefined;
 
     const disableSearch = metricNamesStatus.error || metricNamesStatus.isLoading;
+
+    const selectedMetric = useSelectedMetric(model);
+    const integrations = useDataTrailsAppIntegrations(model);
+
+    const relatedMetricHeuristicOptions: Array<SelectableValue<string>> =
+      integrations?.relatedMetricSortHeuristics.map((heuristic) => ({
+        label: heuristic.label,
+        value: heuristic.id,
+        description: heuristic.description,
+      })) || [];
+
+    useEffect(() => {
+      if (selectedMetric) {
+        const selectedHeuristics =
+          integrations?.relatedMetricSortHeuristics.filter((heuristic) =>
+            selectedRelatedMetricSortHeuristics?.includes(heuristic.id)
+          ) || [];
+
+        const leven = selectedRelatedMetricSortHeuristics?.includes('leven')
+          ? getLevenDistanceFactorCalculator(selectedMetric)
+          : undefined;
+
+        if (selectedHeuristics.length === 0 && !leven) {
+          setSelectedRelatedMetricSortHeuristics(['leven']);
+          return;
+        }
+
+        setRelatedMetricSortHeuristicsLoading(true);
+
+        const heuristicPromises = selectedHeuristics.map((heuristic) => heuristic(selectedMetric));
+
+        Promise.all(heuristicPromises).then((heuristicMaps) => {
+          const heuristicCalculators = heuristicMaps.map(getHeuristicByMetricFactorCalculator);
+          if (leven) {
+            heuristicCalculators.push(leven);
+          }
+
+          model.setActiveRelatedMetricHeuristicCalculators(heuristicCalculators);
+          setRelatedMetricSortHeuristicsLoading(false);
+        });
+      }
+    }, [
+      model,
+      model.setActiveRelatedMetricHeuristicCalculators,
+      selectedMetric,
+      integrations,
+      selectedRelatedMetricSortHeuristics,
+    ]);
 
     return (
       <div className={styles.container}>
@@ -371,6 +453,35 @@ export class MetricSelectScene extends SceneObjectBase<MetricSelectSceneState> {
               initialValue={prefixFilter}
             />
           </Field>
+        </div>
+        <div>
+          {selectedMetric && (
+            <InlineFieldRow>
+              <InlineField label={'Related metrics by'}>
+                <MultiSelect
+                  width={64}
+                  prefix={
+                    relatedMetricSortHeuristicsLoading ? <Icon name="fa fa-spinner" /> : <Icon name="check-circle" />
+                  }
+                  value={selectedRelatedMetricSortHeuristics}
+                  options={[
+                    {
+                      label: 'Name',
+                      value: 'leven',
+                      description:
+                        'Uses an heuristic based on two Levenshtein distance calculations between the currently selected metric and each of the others.',
+                    },
+                    ...relatedMetricHeuristicOptions,
+                  ]}
+                  onChange={(options) => {
+                    console.log('HEY OPTIONS...', options);
+
+                    setSelectedRelatedMetricSortHeuristics(options.map((option) => option.value).filter(isString));
+                  }}
+                />
+              </InlineField>
+            </InlineFieldRow>
+          )}
         </div>
         {metricNamesStatus.error && (
           <Alert title="Unable to retrieve metric names" severity="error">
