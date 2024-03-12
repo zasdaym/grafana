@@ -28,7 +28,7 @@ export interface DataTrailsLabelProvider extends IntegrationContribution {
 
 type Contribute<T extends IntegrationContribution> = (contribution: T) => void;
 
-export type PluginComponentExtensionsContext = {
+export type ComponentExtensionsProps = {
   addMetricSortHeuristic: Contribute<DataTrailsMetricsSortHeuristic>;
   addRelatedMetricSortHeuristic: Contribute<DataTrailsRelatedMetricsSortHeuristic>;
   addMetricProvider: Contribute<DataTrailsMetricProvider>;

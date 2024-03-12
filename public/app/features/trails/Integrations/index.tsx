@@ -8,7 +8,7 @@ import {
   DataTrailsMetricProvider,
   DataTrailsMetricsSortHeuristic,
   DataTrailsRelatedMetricsSortHeuristic,
-  PluginComponentExtensionsContext,
+  ComponentExtensionsProps,
 } from './types';
 import { useIntegrationContributionReducer } from './useIntegrationContributionReducer';
 
@@ -20,27 +20,29 @@ export function useIntegrations() {
   const [metricProviders, addMetricProvider] = useIntegrationContributionReducer<DataTrailsMetricProvider>();
   const [labelProviders, addLabelProvider] = useIntegrationContributionReducer<DataTrailsLabelProvider>();
 
-  const pluginComponentExtensions = useMemo(() => {
-    const context: PluginComponentExtensionsContext = {
+  const extensionContainer = useMemo(() => {
+    const extensionProps: ComponentExtensionsProps = {
       addMetricSortHeuristic,
       addRelatedMetricSortHeuristic,
       addMetricProvider,
       addLabelProvider,
     };
 
-    return getPluginComponentExtensions({
+    const { extensions } = getPluginComponentExtensions<ComponentExtensionsProps>({
       extensionPointId: PluginExtensionPoints.DataTrailsExtension,
-      context,
     });
-  }, [addLabelProvider, addMetricProvider, addMetricSortHeuristic, addRelatedMetricSortHeuristic]);
 
-  const extensionContainer = (
-    <div style={{ display: 'none' }}>
-      {pluginComponentExtensions.extensions.map((c) => (
-        <c.component key={c.id} />
-      ))}
-    </div>
-  );
+    const extensionContainer = (
+      <div style={{ display: 'none' }}>
+        {extensions.map((extension) => {
+          const Component = extension.component;
+
+          return <Component key={extension.id} {...extensionProps} />;
+        })}
+      </div>
+    );
+    return extensionContainer;
+  }, [addLabelProvider, addMetricProvider, addMetricSortHeuristic, addRelatedMetricSortHeuristic]);
 
   return {
     extensionContainer,
