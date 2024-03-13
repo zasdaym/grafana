@@ -2118,6 +2118,19 @@
         "hideFromAdminPage": true,
         "hideFromDocs": true
       }
+    },
+    {
+      "metadata": {
+        "name": "usePrometheusFrontendPackage",
+        "resourceVersion": "1710299179708",
+        "creationTimestamp": "2024-03-13T03:06:19Z"
+      },
+      "spec": {
+        "description": "Use the @grafana/prometheus frontend package in core Prometheus.",
+        "stage": "experimental",
+        "codeowner": "@grafana/observability-metrics",
+        "frontend": true
+      }
     }
   ]
 }

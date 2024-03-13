@@ -658,4 +658,8 @@ const (
 	// FlagEmailVerificationEnforcement
 	// Force email verification for users, even when authenticating through sso.
 	FlagEmailVerificationEnforcement = "emailVerificationEnforcement"
+
+	// FlagUsePrometheusFrontendPackage
+	// Use the @grafana/prometheus frontend package in core Prometheus.
+	FlagUsePrometheusFrontendPackage = "usePrometheusFrontendPackage"
 )
