@@ -1,18 +1,14 @@
 import React from 'react';
 
-import { AdHocVariableFilter } from '@grafana/data';
-import { SceneComponentProps, SceneObjectBase, SceneObjectState, SceneTimeRangeLike } from '@grafana/scenes';
+import { DataTrailEmbeddedState as DataTrailEmbeddedStateRuntime } from '@grafana/runtime';
+import { SceneComponentProps, SceneObjectBase } from '@grafana/scenes';
 
 import { DataTrail } from '../DataTrail';
 import { getDataTrailsApp } from '../DataTrailsApp';
 import { OpenEmbeddedTrailEvent } from '../shared';
 
-export interface DataTrailEmbeddedState extends SceneObjectState {
-  timeRange: SceneTimeRangeLike;
-  metric?: string;
-  filters?: AdHocVariableFilter[];
-  dataSourceUid?: string;
-}
+export type DataTrailEmbeddedState = DataTrailEmbeddedStateRuntime;
+
 export class DataTrailEmbedded extends SceneObjectBase<DataTrailEmbeddedState> {
   static Component = DataTrailEmbeddedRenderer;
 
