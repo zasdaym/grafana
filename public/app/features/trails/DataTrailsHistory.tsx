@@ -69,7 +69,7 @@ export class DataTrailHistory extends SceneObjectBase<DataTrailsHistoryState> {
           this.state.steps[0].trailState = sceneUtils.cloneSceneObjectState(oldState, { history: this });
         }
 
-        if (newState.metric) {
+        if (newState.metric || oldState.metric) {
           this.addTrailStep(trail, 'metric');
         }
       }

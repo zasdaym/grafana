@@ -1,10 +1,18 @@
 import { css } from '@emotion/css';
 import React from 'react';
 
-import { SceneObjectState, SceneObjectBase, SceneComponentProps, VizPanel, SceneQueryRunner } from '@grafana/scenes';
+import { PanelMenuItem } from '@grafana/data';
+import {
+  SceneObjectState,
+  SceneObjectBase,
+  SceneComponentProps,
+  VizPanel,
+  SceneQueryRunner,
+  VizPanelMenu,
+} from '@grafana/scenes';
 import { Field, RadioButtonGroup, useStyles2, Stack } from '@grafana/ui';
 
-import { trailDS } from '../shared';
+import { MetricSelectedEvent, trailDS } from '../shared';
 import { getMetricSceneFor, getTrailSettings } from '../utils';
 
 import { AutoQueryDef } from './types';
@@ -51,6 +59,13 @@ export class AutoVizPanel extends SceneObjectBase<AutoVizPanelState> {
   };
 
   private getVizPanelFor(def: AutoQueryDef) {
+    const item: PanelMenuItem = {
+      text: 'Select new metric',
+      onClick: () => this.publishEvent(new MetricSelectedEvent(undefined), true),
+    };
+
+    const menu: VizPanelMenu = new VizPanelMenu({ items: [item] });
+
     return def
       .vizBuilder()
       .setData(
@@ -60,6 +75,7 @@ export class AutoVizPanel extends SceneObjectBase<AutoVizPanelState> {
           queries: def.queries,
         })
       )
+      .setMenu(menu)
       .setHeaderActions(this.getQuerySelector(def))
       .build();
   }
