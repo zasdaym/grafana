@@ -97,7 +97,7 @@ func (s *Service) CreateAccessToken(ctx context.Context) (cloudmigration.CreateA
 	}
 
 	if existingAccessPolicy != nil {
-		timeoutCtx, cancel := context.WithTimeout(ctx, s.cfg.CloudMigration.FetchAccessPolicyTimeout)
+		timeoutCtx, cancel := context.WithTimeout(ctx, s.cfg.CloudMigration.DeleteAccessPolicyTimeout)
 		defer cancel()
 		if _, err := s.gcomService.DeleteAccessPolicy(timeoutCtx, gcom.DeleteAccessPolicyParams{
 			RequestID:      requestID,
