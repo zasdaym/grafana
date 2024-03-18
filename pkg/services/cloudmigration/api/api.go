@@ -72,5 +72,5 @@ func (api *MigrationAPI) CreateAccessToken(c *contextmodel.ReqContext) response.
 		return response.Error(http.StatusInternalServerError, "creating gcom access token", err)
 	}
 
-	return response.JSON(http.StatusOK, cloudmigration.CreateAccessTokenResponseDTO{Token: resp.Token})
+	return response.JSON(http.StatusOK, cloudmigration.CreateAccessTokenResponseDTO(resp))
 }
