@@ -38,7 +38,7 @@ var LogPrefix = "cloudmigration.service"
 
 const (
 	cloudMigrationAccessPolicyName = "grafana-cloud-migrations"
-	cloudMigrationAccessTokenName  = "grafana-cloud-migrations"
+	cloudMigrationTokenName        = "grafana-cloud-migrations"
 )
 
 var _ cloudmigration.Service = (*Service)(nil)
@@ -131,8 +131,8 @@ func (s *Service) CreateAccessToken(ctx context.Context) (cloudmigration.CreateA
 	defer cancel()
 	token, err := s.gcomService.CreateToken(timeoutCtx, gcom.CreateTokenParams{RequestID: requestID, Region: s.cfg.CloudMigration.Region}, gcom.CreateTokenPayload{
 		AccessPolicyID: accessPolicy.ID,
-		DisplayName:    cloudMigrationAccessTokenName,
-		Name:           cloudMigrationAccessTokenName,
+		DisplayName:    cloudMigrationTokenName,
+		Name:           cloudMigrationTokenName,
 		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour),
 	})
 	if err != nil {
