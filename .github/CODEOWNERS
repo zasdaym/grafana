@@ -617,6 +617,7 @@ playwright.config.ts @grafana/plugins-platform-frontend
 /pkg/services/caching/ @grafana/grafana-operator-experience-squad
 /pkg/services/featuremgmt/ @grafana/grafana-operator-experience-squad
 /pkg/services/cloudmigration/ @grafana/grafana-operator-experience-squad
+/pkg/services/gcom/ @grafana/grafana-operator-experience-squad
 
 # Kind definitions
 /kinds/dashboard @grafana/dashboards-squad
