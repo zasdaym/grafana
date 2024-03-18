@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,16 +12,17 @@ import (
 	"time"
 
 	"github.com/go-openapi/strfmt"
+	amv2 "github.com/prometheus/alertmanager/api/v2/models"
+	"github.com/prometheus/alertmanager/cluster/clusterpb"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/require"
+
 	apimodels "github.com/grafana/grafana/pkg/services/ngalert/api/tooling/definitions"
 	"github.com/grafana/grafana/pkg/services/ngalert/metrics"
 	ngmodels "github.com/grafana/grafana/pkg/services/ngalert/models"
 	"github.com/grafana/grafana/pkg/services/ngalert/notifier"
 	"github.com/grafana/grafana/pkg/services/ngalert/tests/fakes"
 	"github.com/grafana/grafana/pkg/util"
-	amv2 "github.com/prometheus/alertmanager/api/v2/models"
-	"github.com/prometheus/alertmanager/cluster/clusterpb"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/stretchr/testify/require"
 )
 
 // Valid Grafana Alertmanager configuration.
@@ -274,8 +274,8 @@ func TestIntegrationRemoteAlertmanagerSilences(t *testing.T) {
 	require.Equal(t, 0, len(silences))
 
 	// Creating a silence should succeed.
-	testSilence := genSilence("test")
-	id, err := am.CreateSilence(context.Background(), &testSilence)
+	testSilence := notifier.GenSilence("test")
+	id, err := am.CreateSilence(context.Background(), testSilence)
 	require.NoError(t, err)
 	require.NotEmpty(t, id)
 	testSilence.ID = id
@@ -290,8 +290,8 @@ func TestIntegrationRemoteAlertmanagerSilences(t *testing.T) {
 	require.Error(t, err)
 
 	// After creating another silence, the total amount should be 2.
-	testSilence2 := genSilence("test")
-	id, err = am.CreateSilence(context.Background(), &testSilence2)
+	testSilence2 := notifier.GenSilence("test")
+	id, err = am.CreateSilence(context.Background(), testSilence2)
 	require.NoError(t, err)
 	require.NotEmpty(t, id)
 	testSilence2.ID = id
@@ -420,27 +420,6 @@ func TestIntegrationRemoteAlertmanagerReceivers(t *testing.T) {
 	rcvs, err := am.GetReceivers(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, "empty-receiver", *rcvs[0].Name)
-}
-
-func genSilence(createdBy string) apimodels.PostableSilence {
-	starts := strfmt.DateTime(time.Now().Add(time.Duration(rand.Int63n(9)+1) * time.Second))
-	ends := strfmt.DateTime(time.Now().Add(time.Duration(rand.Int63n(9)+10) * time.Second))
-	comment := "test comment"
-	isEqual := true
-	name := "test"
-	value := "test"
-	isRegex := false
-	matchers := amv2.Matchers{&amv2.Matcher{IsEqual: &isEqual, Name: &name, Value: &value, IsRegex: &isRegex}}
-
-	return apimodels.PostableSilence{
-		Silence: amv2.Silence{
-			Comment:   &comment,
-			CreatedBy: &createdBy,
-			Matchers:  matchers,
-			StartsAt:  &starts,
-			EndsAt:    &ends,
-		},
-	}
 }
 
 func genAlert(active bool, labels map[string]string) amv2.PostableAlert {
