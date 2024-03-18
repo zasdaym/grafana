@@ -2,7 +2,6 @@ package cloudmigration
 
 import (
 	"github.com/grafana/grafana/pkg/util/errutil"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -28,16 +27,10 @@ type MigrateDatasourcesResponseDTO struct {
 	DatasourcesMigrated int `json:"datasourcesMigrated"`
 }
 
-const (
-	namespace = "grafana"
-	subsystem = "cloudmigrations"
-)
+type CreateAccessTokenResponse struct {
+	Token string
+}
 
-var PromMetrics = []prometheus.Collector{
-	prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: namespace,
-		Subsystem: subsystem,
-		Name:      "datasources_migrated",
-		Help:      "Total amount of data sources migrated",
-	}, []string{"pdc_converted"}),
+type CreateAccessTokenResponseDTO struct {
+	Token string `json:"token"`
 }

@@ -14,3 +14,7 @@ var _ cloudmigration.Service = (*NoopServiceImpl)(nil)
 func (s *NoopServiceImpl) MigrateDatasources(ctx context.Context, request *cloudmigration.MigrateDatasourcesRequest) (*cloudmigration.MigrateDatasourcesResponse, error) {
 	return nil, cloudmigration.ErrFeatureDisabledError
 }
+
+func (s *NoopServiceImpl) CreateAccessToken(context.Context) (cloudmigration.CreateAccessTokenResponse, error) {
+	return cloudmigration.CreateAccessTokenResponse{}, cloudmigration.ErrFeatureDisabledError
+}
