@@ -37,8 +37,10 @@ type Service struct {
 var LogPrefix = "cloudmigration.service"
 
 const (
+	//nolint:gosec
 	cloudMigrationAccessPolicyName = "grafana-cloud-migrations"
-	cloudMigrationTokenName        = "grafana-cloud-migrations"
+	//nolint:gosec
+	cloudMigrationTokenName = "grafana-cloud-migrations"
 )
 
 var _ cloudmigration.Service = (*Service)(nil)
