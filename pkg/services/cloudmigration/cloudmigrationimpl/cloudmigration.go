@@ -91,9 +91,16 @@ func (s *Service) CreateAccessToken(ctx context.Context) (cloudmigration.CreateA
 	logger := s.log.FromContext(ctx)
 	requestID := tracing.TraceIDFromContext(ctx, false)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, s.cfg.CloudMigration.FetchAccessPolicyTimeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, s.cfg.CloudMigration.FetchInstanceTimeout)
 	defer cancel()
-	existingAccessPolicy, err := s.findAccessPolicyByName(timeoutCtx, cloudMigrationAccessPolicyName)
+	instance, err := s.gcomService.GetInstanceByID(timeoutCtx, requestID, s.cfg.StackID)
+	if err != nil {
+		return cloudmigration.CreateAccessTokenResponse{}, fmt.Errorf("fetching instance by id: id=%s %w", s.cfg.StackID, err)
+	}
+
+	timeoutCtx, cancel = context.WithTimeout(ctx, s.cfg.CloudMigration.FetchAccessPolicyTimeout)
+	defer cancel()
+	existingAccessPolicy, err := s.findAccessPolicyByName(timeoutCtx, instance.RegionSlug, cloudMigrationAccessPolicyName)
 	if err != nil {
 		return cloudmigration.CreateAccessTokenResponse{}, fmt.Errorf("fetching access policy by name: name=%s %w", cloudMigrationAccessPolicyName, err)
 	}
@@ -104,9 +111,9 @@ func (s *Service) CreateAccessToken(ctx context.Context) (cloudmigration.CreateA
 		if _, err := s.gcomService.DeleteAccessPolicy(timeoutCtx, gcom.DeleteAccessPolicyParams{
 			RequestID:      requestID,
 			AccessPolicyID: existingAccessPolicy.ID,
-			Region:         s.cfg.CloudMigration.Region,
+			Region:         instance.RegionSlug,
 		}); err != nil {
-			return cloudmigration.CreateAccessTokenResponse{}, fmt.Errorf("deleting access policy: id=%s region=%s %w", existingAccessPolicy.ID, s.cfg.CloudMigration.Region, err)
+			return cloudmigration.CreateAccessTokenResponse{}, fmt.Errorf("deleting access policy: id=%s region=%s %w", existingAccessPolicy.ID, instance.RegionSlug, err)
 		}
 		logger.Info("deleted access policy", existingAccessPolicy.ID, "name", existingAccessPolicy.Name)
 	}
@@ -116,7 +123,7 @@ func (s *Service) CreateAccessToken(ctx context.Context) (cloudmigration.CreateA
 	accessPolicy, err := s.gcomService.CreateAccessPolicy(timeoutCtx,
 		gcom.CreateAccessPolicyParams{
 			RequestID: requestID,
-			Region:    s.cfg.CloudMigration.Region,
+			Region:    instance.RegionSlug,
 		},
 		gcom.CreateAccessPolicyPayload{
 			Name:        cloudMigrationAccessPolicyName,
@@ -131,12 +138,14 @@ func (s *Service) CreateAccessToken(ctx context.Context) (cloudmigration.CreateA
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, s.cfg.CloudMigration.CreateTokenTimeout)
 	defer cancel()
-	token, err := s.gcomService.CreateToken(timeoutCtx, gcom.CreateTokenParams{RequestID: requestID, Region: s.cfg.CloudMigration.Region}, gcom.CreateTokenPayload{
-		AccessPolicyID: accessPolicy.ID,
-		DisplayName:    cloudMigrationTokenName,
-		Name:           cloudMigrationTokenName,
-		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour),
-	})
+	token, err := s.gcomService.CreateToken(timeoutCtx,
+		gcom.CreateTokenParams{RequestID: requestID, Region: instance.RegionSlug},
+		gcom.CreateTokenPayload{
+			AccessPolicyID: accessPolicy.ID,
+			DisplayName:    cloudMigrationTokenName,
+			Name:           cloudMigrationTokenName,
+			ExpiresAt:      time.Now().Add(7 * 24 * time.Hour),
+		})
 	if err != nil {
 		return cloudmigration.CreateAccessTokenResponse{}, fmt.Errorf("creating access token: %w", err)
 	}
@@ -146,17 +155,17 @@ func (s *Service) CreateAccessToken(ctx context.Context) (cloudmigration.CreateA
 	return cloudmigration.CreateAccessTokenResponse{Token: token.Token}, nil
 }
 
-func (s *Service) findAccessPolicyByName(ctx context.Context, accessPolicyName string) (*gcom.AccessPolicy, error) {
+func (s *Service) findAccessPolicyByName(ctx context.Context, regionSlug, accessPolicyName string) (*gcom.AccessPolicy, error) {
 	ctx, span := s.tracer.Start(ctx, "CloudMigrationService.findAccessPolicyByName")
 	defer span.End()
 
 	accessPolicies, err := s.gcomService.ListAccessPolicies(ctx, gcom.ListAccessPoliciesParams{
 		RequestID: tracing.TraceIDFromContext(ctx, false),
-		Region:    s.cfg.CloudMigration.Region,
+		Region:    regionSlug,
 		Name:      accessPolicyName,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("listing access policies: name=%s region=%s :%w", accessPolicyName, s.cfg.CloudMigration.Region, err)
+		return nil, fmt.Errorf("listing access policies: name=%s region=%s :%w", accessPolicyName, regionSlug, err)
 	}
 
 	for _, accessPolicy := range accessPolicies {
